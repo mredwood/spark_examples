@@ -10,6 +10,8 @@ spark.sql("DROP TABLE IF EXISTS datos_padron.padron_txt_string")
 spark.sql("DROP TABLE IF EXISTS datos_padron.padrontemp")
 spark.sql("DROP TABLE IF EXISTS datos_padron.padron_txt")
 spark.sql("DROP TABLE IF EXISTS datos_padron.padron_txt_2")
+spark.sql("DROP TABLE IF EXISTS datos_padron.padron_txt_regexTemp")
+spark.sql("DROP TABLE IF EXISTS datos_padron.padron_txt_regex")
 spark.sql("DROP DATABASE IF EXISTS datos_padron")
 
 ## Creamos una base de datos llamada datos_padron.
@@ -46,3 +48,19 @@ spark.sql("""CREATE TABLE padron_txt AS SELECT CAST(COD_DISTRITO AS INT) AS COD_
 spark.sql("""CREATE TABLE padron_txt_2 AS SELECT COD_DISTRITO, TRIM(DESC_DISTRITO) AS DESC_DISTRITO, COD_DIST_BARRIO, TRIM(DESC_BARRIO) AS DESC_BARRIO, COD_BARRIO, COD_DIST_SECCION, COD_SECCION, COD_EDAD_INT, (CASE WHEN EspanolesHombres IS NULL THEN 0 ELSE EspanolesHombres END) AS EspanolesHombres, (CASE WHEN EspanolesMujeres IS NULL THEN 0 ELSE EspanolesMujeres END) AS EspanolesMujeres, (CASE WHEN ExtranjerosHombres IS NULL THEN 0 ELSE ExtranjerosHombres END) AS ExtranjerosHombres, (CASE WHEN ExtranjerosMujeres IS NULL THEN 0 ELSE ExtranjerosMujeres END) AS ExtranjerosMujeres FROM padron_txt""")
 
 spark.sql("SELECT * FROM padron_txt_2 LIMIT 10").show()
+
+
+## Creamos una tabla padron_txt_regex usando expresiones regulares.
+
+spark.sql(r"""CREATE TABLE padron_txt_regexTemp(COD_DISTRITO int, DESC_DISTRITO string, COD_DIST_BARRIO int, DESC_BARRIO string, COD_BARRIO int, COD_DIST_SECCION int, COD_SECCION int, COD_EDAD_INT int, EspanolesHombres int, EspanolesMujeres int, ExtranjerosHombres int, ExtranjerosMujeres int) ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.RegexSerDe' WITH SERDEPROPERTIES ('input.regex'='\\"(\\d+)\\";\\"([A-Za-z]+)\\s*\\";\\"(\\d+)\\";\\"([A-Za-z]+)\\s*\\";\\"(\\d+)\\";\\"(\\d+)\\";\\"(\\d+)\\";\\"(\\d+)\\";\\"(\\d*)\\";\\"(\\d*)\\";\\"(\\d*)\\";\\"(\\d*)\"')""")
+
+spark.sql("DESCRIBE TABLE padron_txt_regexTemp").show()
+
+spark.sql("""LOAD DATA LOCAL INPATH '/home/manjaro/Downloads/Rango_Edades_Seccion_202105.csv' INTO TABLE padron_txt_regexTemp""")
+
+
+## Usamos otra vez un CTAS que omita la primera fila y cambie los null a 0.
+
+spark.sql("""CREATE TABLE padron_txt_regex AS SELECT COD_DISTRITO, DESC_DISTRITO, COD_DIST_BARRIO, DESC_BARRIO, COD_BARRIO, COD_DIST_SECCION, COD_SECCION, COD_EDAD_INT, COALESCE(EspanolesHombres, 0) AS EspanolesHombres, COALESCE(EspanolesMujeres, 0) AS EspanolesMujeres, COALESCE(ExtranjerosHombres, 0) AS ExtranjerosHombres, COALESCE(ExtranjerosMujeres, 0) AS ExtranjerosMujeres FROM padron_txt_regexTemp WHERE cod_distrito IS NOT NULL AND COD_DIST_BARRIO IS NOT NULL""")
+
+spark.sql("SELECT * FROM padron_txt_regex LIMIT 10").show()
