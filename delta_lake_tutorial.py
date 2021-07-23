@@ -390,10 +390,10 @@ spark.sql("DESCRIBE HISTORY tabla1").show()
 # COMMAND ----------
 
 #Esto no funciona en local: https://github.com/delta-io/delta/issues/634
-spark.sql("SELECT * FROM tabla1 VERSION AS OF 1").show()
+spark.sql("SELECT * FROM tabla1 VERSION AS OF 5").show()
 
 #También es posible:
-#spark.read.format("delta").option("versionAsOf", 1).load("/user/hive/warehouse/tabla1").show()
+#spark.read.format("delta").option("versionAsOf", 5).load("/user/hive/warehouse/tabla1").show()
 
 # COMMAND ----------
 
